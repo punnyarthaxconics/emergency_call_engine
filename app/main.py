@@ -2,7 +2,7 @@
 from app.rmq.rmq import get_broker
 from app.db.nosqldb import get_db
 import json
-from app.services.limiter import add_to_limiter
+from app.services.limiter import add_to_limiter, limiter
 
 
 def consume_switches():
@@ -12,7 +12,7 @@ def consume_switches():
     def callback(ch, method, properties, body):
         body = json.loads(body.decode('utf-8'))
 
-        cache_string = f"switch_{body['switch_mac']}"
+        cache_string = f"{body["type"]}_switch_{body['switch_mac']}_state_{body.get('switch_value', "None")}"
         print(f" [x] Received {body}")
         switch_payload = {}
 
@@ -32,12 +32,14 @@ def consume_switches():
                     "type": "worker"
                 }
 
-
+            print(" [x] Processed", body)
             message_broker.publish('emergency_calls_processed', json.dumps(switch_payload))
         else:
             print("Duplicate packet")
         ch.basic_ack(delivery_tag=method.delivery_tag)
     
+        print(limiter)
+
     message_broker.register_consumer('emergency_calls', callback)
 
 

@@ -7,10 +7,12 @@ limiter = {
 def add_to_limiter(packet: str, timestamp: float):
     global limiter
 
-    timestamp_in_seconds = timestamp 
-    # Check if the packet is already in the cache and timestamp difference is less than 20 seconds
-    if packet in limiter and (timestamp - limiter[packet]) < 20:
-        return False
+    # Check if the packet is already in the cache and timestamp difference is less than 5 seconds
+    if packet in limiter:
+        time_difference = timestamp - limiter[packet]
+        print(f"Time difference: {time_difference}")
+        if time_difference < 30:
+            return False
 
     limiter[packet] = timestamp
 

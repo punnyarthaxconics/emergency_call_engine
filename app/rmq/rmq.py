@@ -8,6 +8,7 @@ class MessageBroker:
         self.connection_string = connection_string
         self.connection = pika.BlockingConnection(pika.URLParameters(connection_string))
         self.channel = self.connection.channel()
+        self.try_count = 0
 
         # Check if connection is established
 
@@ -23,10 +24,23 @@ class MessageBroker:
         for queue in queues:
             self.channel.queue_declare(queue=queue)
             self.channel.queue_bind(exchange=exchange_name, queue=queue, routing_key=queue)
-        
+    
+    def connect(self):
+        self.connection = pika.BlockingConnection(pika.URLParameters(self.connection_string))
+        self.channel = self.connection.channel()
     
     def publish(self, queue: str, message: str):
-        self.channel.basic_publish(exchange=self.exchange_name, routing_key=queue, body=message)
+        try:
+            self.channel.basic_publish(exchange=self.exchange_name, routing_key=queue, body=message)
+        except Exception as e:
+            print(f"Error in publishing message {e}")
+            if self.try_count > 5:
+                self.try_count = 0
+                raise ConnectionError("Connection to RabbitMQ failed")
+            if self.connection.is_closed:
+                self.connect()
+                self.publish(queue, message)
+                self.try_count += 1
 
     def register_consumer(self, queue: str, callback):
         
